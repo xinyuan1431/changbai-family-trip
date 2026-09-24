@@ -1,25 +1,48 @@
-export type Event = {id:string;day:number;time:string;title:string;location:string;people:string;status:string;notes:string};
-export type Task = {id:string;title:string;category:string;owner:string;done:boolean};
-export type Expense={id:string;title:string;category:string;amount:number;date:string;payer:string;group:string;notes:string};
-export type Tip={id:string;title:string;notes:string};
-export type Trip={title:string;start:string;days:number;families:{name:string;members:string[]}[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number};
-const rows=[
-[0,'01:00 左右','北京出发，奔赴长春','北京 → 长春','我、表哥','时间待核对','10 月 1 日凌晨一点多乘高铁；车次、出发站与准确时间以车票为准。注意不要把凌晨票误看成 1 日晚上。'],
-[0,'05:35 左右','长春汇合 · 先好好休息','长春','全员','已规划','四位长辈已在长春。我与表哥抵达后汇合，早餐、补觉，长春住爸妈家。'],
-[0,'下午 / 晚上','高铁前往长白山','长春 → 长白山站','全员','待确认','具体车次、出发时间及车站接送待补充。'],
-[0,'抵达后','入住二道白河民宿','二道白河','全员','待确认','入住 1、2、3 日三晚，4 日退房。补充民宿名称、地址、房东联系方式和入住方式。晚餐未定。'],
-[1,'全天','长白山北坡 · 六人 VIP 游览','长白山北景区','全员','待预订','计划订官方六人 VIP 用车。核对车辆可乘人数、接送点、费用包含项目、主峰交通及天气停运退改规则。天池能否游览以当天开放公告为准。'],
-[1,'晚上','回小镇，吃一顿热乎的','二道白河','全员','待安排','餐厅未定，按游玩结束时间与体力安排。仍住同一民宿。'],
-[2,'上午','朝鲜族服饰旅拍','二道白河 · 店铺待选','表哥；我可能参加','待预订','核对妆造、服装、拍摄地点、底片与精修、交付时间；与下午温泉预留衔接时间。'],
-[2,'上午','长辈自由逛逛 · 平行安排','二道白河','爸、妈、大姨妈、大姨夫','备选','早市或镇内散步作为备选，具体地点与营业时间待核实。与旅拍组约定午餐汇合位置。'],
-[2,'下午','一起泡聚龙温泉','具体温泉场馆待确认','全员','待预订','六人泡温泉。需要明确是哪个可泡浴场馆，北景区聚龙温泉群观景点与温泉酒店泡浴产品不要混淆。核对往返交通与用品。'],
-[2,'晚上','恩都里 · 晚餐与夜游','恩都里','全员','待确认','计划吃饭、看烟花。2026 年 10 月 3 日是否有烟花、开始时间及天气取消规则均待商家当天确认。'],
-[3,'上午 / 下午','露水河 · 森林漂流','露水河长白山狩猎度假区（待核对产品）','全员','待预订','原口述“陆水河国家公园”，按露水河漂流方向整理。预订前确认准确景区、门票+漂流+六人接送、行李放置、游玩时长及返回车站时间。'],
-[3,'返程前','取行李，提前去车站','民宿 → 长白山站','全员','待安排','漂流当天先确认退房与寄存。建议预留路况、换衣、取行李及进站缓冲；接送商家需明确最晚返程时间。'],
-[3,'19:00 左右','回到长春，住爸妈家','长白山 → 长春','全员','时间待核对','约晚上七点乘高铁，具体车次以车票为准。到长春后住爸妈家。'],
-[4,'白天','长春慢生活 · 洗浴 / 城市闲逛','长春','参与人待定','日期可调整','5 日与 6 日中选一天体验长春洗浴，另一天闲逛、吃羊汤；先留弹性，不重复预订。'],
-[5,'白天','继续逛长春，吃点喜欢的','长春','参与人待定','日期可调整','与 5 日洗浴安排对调也可以，结合返京车次确定。'],
-[5,'晚上 / 次日凌晨','我和表哥返京','长春 → 北京','我、表哥','待购票','计划 10 月 6 日晚或 7 日凌晨出发，车票尚未订。若订 7 日凌晨车次，票面日期应为 7 日。']
-];
-export const initialTrip:Trip={title:'长白山 · 秋日旅行',start:'2026-10-01',days:6,budget:0,families:[{name:'我家',members:['我','爸','妈']},{name:'表哥家',members:['大姨妈','大姨夫','表哥']}],events:rows.map((r,i)=>({id:'e'+i,day:r[0] as number,time:r[1] as string,title:r[2] as string,location:r[3] as string,people:r[4] as string,status:r[5] as string,notes:r[6] as string})),expenses:[],tasks:[['订北坡官方六人 VIP，用车范围与退改一并确认','预订','我'],['核对所有高铁车次、票面日期和出发站','交通','我'],['订长春返北京的车票（6 日晚或 7 日凌晨）','交通','我、表哥'],['补全三晚民宿地址、入住与行李寄存信息','住宿','我'],['确认旅拍店、妆造和照片套餐','预订','表哥'],['给四位长辈确认 3 日上午活动与集合点','行程','我'],['确认聚龙温泉具体场馆，订六人票与交通','预订','我'],['订露水河门票、漂流、六人往返接送套餐','预订','我'],['确认恩都里 3 日烟花时刻与晚餐','餐饮','我'],['选好长白山几顿正餐，询问国庆订位','餐饮','全员'],['出发前与上山当天查看天气及景区开放公告','行前','全员'],['带防风保暖外套、保暖层、防滑鞋和雨具','行李','全员'],['带泳衣、拖鞋、漂流后替换衣袜与防水袋','行李','全员'],['带身份证、充电宝、充电线和个人常用物品','行李','全员']].map((r,i)=>({id:'t'+i,title:r[0],category:r[1],owner:r[2],done:false})),tips:[{id:'p1',title:'山上与小镇，分开看天气',notes:'这里不显示未经核实的实时气温。出发前 2—3 天及上山当天，分别查看二道白河和天池主峰天气、风力与景区开放公告；有天气变化时保留镇内活动备选。'},{id:'p2',title:'分层穿衣，方便增减',notes:'准备防风保暖外套、保暖中层、长裤和防滑鞋；帽子、手套按临行预报准备。漂流与泡温泉另外装一袋替换衣袜及泳衣。最终厚度按出发前天气调整。'},{id:'p3',title:'4 日漂流，要为晚间高铁留余量',notes:'提前和接送方说清约 19 点的高铁安排，核对最晚返程、交通缓冲、退房、取行李与换衣地点。当天若交通或天气不适合，优先保住返程。'},{id:'p4',title:'预订时把六个人算清楚',notes:'VIP 用车与漂流接送均核对六名游客的座位、行李空间、司机是否额外占位及全包费用。未得到订单确认前，保持“待预订”。'}]};
+import {initialTrip as legacy} from './legacy-trip-data';
+export type Member={id:string;name:string};
+export type Family={id:string;name:string;members:Member[]};
+export type Participants={mode:'all'|'selected'|'pending';familyIds:string[];memberIds:string[];excludedIds:string[];note:string};
+export type Event={id:string;day:number;time:string;title:string;location:string;people:string;status:string;notes:string;participants:Participants;placeIds:string[];category:string};
+export type Task={id:string;title:string;category:string;owner:string;done:boolean};
+export type Expense={id:string;title:string;category:string;amount:number;date:string;payer:string;group:string;notes:string;payerId?:string;familyId?:string};
+export type Tip={id:string;title:string;notes:string;url?:string};
+export type Place={id:string;name:string;category:string;address:string;description:string;highlights:string;hours:string;phone:string;url:string;mapUrl:string;source:string;notes:string;status:string;favorite:boolean};
+export type Stay={id:string;placeId:string;checkIn:string;checkOut:string;room:string;status:string;notes:string;participants:Participants};
+export type DayInfo={title:string;region:string;note:string};
+export type Cover={subtitle:string;kicker:string;headline:string;route:string;note:string};
+export type Trip={schemaVersion:2;title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
+export const allPeople=():Participants=>({mode:'all',familyIds:[],memberIds:[],excludedIds:[],note:''});
+export const placeCategories=['景点','住宿','旅拍','餐厅','温泉','交通','其他'];
+export const eventCategories=['交通','游览','早餐','午餐','晚餐','住宿','旅拍','温泉','其他'];
 export function dateAt(start:string,day:number){const d=new Date(start+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+day);return d.toISOString().slice(0,10)}
+export function nights(a:string,b:string){return Math.max(0,Math.round((Date.parse(b)-Date.parse(a))/86400000))}
+export function membersOf(families:Family[]){return families.flatMap(f=>f.members)}
+export function participantIds(p:Participants,families:Family[]){const all=membersOf(families);if(p.mode==='pending')return [];const chosen=p.mode==='all'?all.map(m=>m.id):[...p.memberIds,...families.filter(f=>p.familyIds.includes(f.id)).flatMap(f=>f.members.map(m=>m.id))];return all.filter(m=>chosen.includes(m.id)&&!p.excludedIds.includes(m.id)).map(m=>m.id)}
+export function participantLabel(p:Participants,families:Family[]){const ids=participantIds(p,families);if(p.mode==='pending')return '参与人待定';if(p.mode==='all'&&!p.excludedIds.length)return `全员 · ${ids.length} 人`;return ids.length?membersOf(families).filter(m=>ids.includes(m.id)).map(m=>m.name).join('、'):'尚未选择参与人'}
+export function cleanParticipants(p:Participants,families:Family[]):Participants{const ids=membersOf(families).map(m=>m.id);return {...p,familyIds:p.familyIds.filter(id=>families.some(f=>f.id===id)),memberIds:p.memberIds.filter(id=>ids.includes(id)),excludedIds:p.excludedIds.filter(id=>ids.includes(id))}}
+export const defaultCover:Cover={subtitle:'我们的家庭旅行手账',kicker:'AUTUMN DAYS · FAMILY TRIP',headline:'一起，走进山野的秋天。',route:'北京 → 长春 → 二道白河',note:'把想去的地方、想吃的东西，慢慢装进行程里。'};
+const dayTitles=['汇合，向长白山出发','北坡一日，去看天池','旅拍、温泉与小镇夜色','森林漂流，然后回长春','长春慢生活','闲逛、美食与返程'];
+export function defaultDay(i:number):DayInfo{return {title:dayTitles[i]||'自由探索的一天',region:i<4?'长白山':i<6?'长春':'待安排',note:i===2?'上午分头活动，下午一起泡温泉。':i===3?'漂流与高铁同一天，留足返程缓冲。':''}}
+function place(id:string,name:string,category:string,description:string,source='',highlights=''):Place{return {id,name,category,address:'',description,source,highlights,hours:'',phone:'',url:'',mapUrl:'',notes:'',status:'待确认',favorite:false}}
+export const defaultPlaces:Place[]=[
+place('place-stay','二道白河民宿（名称待补充）','住宿','计划连续住三晚，作为北坡、旅拍、温泉和漂流的落脚点。请在这里补全实际民宿名称、门牌地址和联系方式。'),
+place('place-north','长白山北景区','景点','这一天以北景区游览为主。北景区有天池、长白瀑布、聚龙温泉群、绿渊潭、小天池和森林景观，具体路线由当天开放情况与预订服务决定。','https://changbaishan.gov.cn/hdjl/zfsqpt/jlszbsbhkfqglwyh/sqck/blhf/202410/t20241017_265041.html','想看天池、瀑布与秋日森林。主峰天气和山下不同；VIP 服务范围需与官方订单核对。'),
+place('place-enduli','恩都里','景点','二道白河的休闲商旅社区，汇集餐饮、文创、民俗演艺等内容，适合安排晚餐与夜游。','https://www.changbaishan.gov.cn/mtcbs/202507/t20250715_267687.html','本次旅行想看烟花；具体场次、天气取消规则与就餐店铺仍待确认。'),
+place('place-river','露水河长白山狩猎度假区','景点','露水河漂流方向的目的地资料卡。准确套餐、集合点和入口需按最终商家订单填写。','https://www.cbsslc.com/','秋日森林、漂流。计划购买六人门票、漂流和往返接送；预留换衣、取行李与高铁缓冲。'),
+place('place-spa','聚龙温泉（具体场馆待选）','温泉','这是六人泡温泉的计划资料卡，尚未指定具体温泉酒店或泡浴场馆。北景区内的温泉群观景点不等同于泡浴产品。','','核对场馆名称、套餐包含项目、泳衣用品和来回交通。')
+];
+function legacyParticipants(text:string,families:Family[]):Participants{if(text==='全员')return allPeople();const exact=text.split(/[、，,；;]/).map(s=>s.trim());const matches=membersOf(families).filter(m=>exact.includes(m.name));const remaining=exact.filter(s=>!membersOf(families).some(m=>m.name===s));return {mode:matches.length?'selected':'pending',familyIds:[],memberIds:matches.map(m=>m.id),excludedIds:[],note:remaining.length?text:''}}
+// Pure, deterministic compatibility conversion. Loading never overwrites cloud data.
+export function normalizeTrip(raw:unknown):Trip{
+ const r=raw as Record<string,any>;
+ const families:Family[]=(r.families||[]).map((f:any,i:number)=>({...f,id:f.id||`legacy-family-${i}`,members:f.members.map((m:any,j:number)=>typeof m==='string'?{id:`legacy-member-${i}-${j}`,name:m}:m)}));
+ const places:Place[]=r.places===undefined?structuredClone(defaultPlaces):r.places;
+ const legacyLinks:Record<string,string[]>={'入住二道白河民宿':['place-stay'],'长白山北坡 · 六人 VIP 游览':['place-north'],'恩都里 · 晚餐与夜游':['place-enduli'],'露水河 · 森林漂流':['place-river'],'一起泡聚龙温泉':['place-spa']};
+ const events:Event[]=r.events.map((e:any)=>({...e,participants:e.participants||legacyParticipants(e.people||'',families),placeIds:e.placeIds||((legacyLinks[e.title]||[]).filter(id=>places.some(p=>p.id===id))),category:e.category||(/高铁|出发|返京|回到长春/.test(e.title)?'交通':/民宿/.test(e.title)?'住宿':/旅拍/.test(e.title)?'旅拍':/温泉/.test(e.title)?'温泉':/晚餐|热乎/.test(e.title)?'晚餐':'游览')}));
+ const stays:Stay[]=r.stays===undefined?[{id:'stay-first',placeId:'place-stay',checkIn:r.start,checkOut:dateAt(r.start,3),room:'房型与房间分配待补充',status:'待确认',notes:'原计划住三晚；退房当天确认行李寄存与取行李安排。',participants:allPeople()}]:r.stays;
+ const tips=r.schemaVersion===2?r.tips:[...r.tips,{id:'official-north',title:'天气与景区开放 · 临行核实',notes:'山顶与镇内天气要分别确认，出行前查看长白山官方公告。',url:'https://www.changbaishan.gov.cn/'},{id:'official-river',title:'露水河 · 套餐与接送核实',notes:'漂流开放、集合点和接送时间按最终订单与景区公告确认。',url:'https://www.cbsslc.com/'}];
+ return {...r,schemaVersion:2,families,events,places,stays,tips,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
+}
+export const initialTrip=normalizeTrip(legacy);
+export function placeNames(e:Event,t:Trip){const names=e.placeIds.map(id=>t.places.find(p=>p.id===id)?.name).filter(Boolean);return names.length?names.join(' / '):e.location||'地点待补充'}
+export function safeUrl(value:string){try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:undefined}catch{return undefined}}
