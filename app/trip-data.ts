@@ -15,12 +15,13 @@ export type Place={id:string;name:string;category:string;address:string;descript
 export type Stay={id:string;placeId:string;checkIn:string;checkOut:string;room:string;status:string;notes:string;participants:Participants};
 export type DayInfo={title:string;region:string;note:string};
 export type Cover={subtitle:string;kicker:string;headline:string;route:string;note:string};
-export type Trip={schemaVersion:6;categoryLabels:Record<string,string>;taskCategories:string[];packingCategories:string[];tickets:Ticket[];reminders:Reminder[];funds:Fund[];packing:PackingItem[];title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
+export type Trip={schemaVersion:7;categoryLabels:Record<string,string>;taskCategories:string[];packingCategories:string[];tickets:Ticket[];reminders:Reminder[];funds:Fund[];packing:PackingItem[];title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
 export const allPeople=():Participants=>({mode:'all',familyIds:[],memberIds:[],excludedIds:[],note:''});
 export const placeCategories=['住宿','景点','餐厅','旅拍','用车与联络','其他'];
-export const placeFilters=['必去 / 必吃',...placeCategories];
+export const placeFilters=['住宿','必去 / 必吃',...placeCategories.filter(c=>c!=='住宿')];
 export const defaultCategoryLabels:Record<string,string>=Object.fromEntries(placeFilters.map(c=>[c,c==='旅拍'?'体验':c]));
-export type Ticket={id:string;title:string;mode:string;date:string;time:string;arrival:string;from:string;to:string;number:string;status:string;seats:string;notes:string;participants:Participants};
+export type SeatAssignment={memberId:string;carriage:string;seat:string};
+export type Ticket={seatAssignments:SeatAssignment[];id:string;title:string;mode:string;date:string;time:string;arrival:string;from:string;to:string;number:string;status:string;seats:string;notes:string;participants:Participants};
 export const eventCategories=['交通','游览','早餐','午餐','晚餐','住宿','旅拍','温泉','其他'];
 export function dateAt(start:string,day:number){const d=new Date(start+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+day);return d.toISOString().slice(0,10)}
 export function nights(a:string,b:string){return Math.max(0,Math.round((Date.parse(b)-Date.parse(a))/86400000))}
@@ -54,9 +55,9 @@ export function normalizeTrip(raw:unknown):Trip{
  const packing=r.packing??defaultPacking.map(p=>({...p,done:!!r.tasks.find((t:Task)=>t.id===(p.category==='衣物与鞋袜'?'t11':p.category==='温泉与漂流'?'t12':'t13')&&t.done)}));
  const funds=(r.funds??[{id:'initial-fund-20000',kind:'in',amount:20000,person:'大姨妈',date:'',notes:'首笔旅行备用金，已收到；具体转账日期待补充。'}]).map((f:Fund)=>({...f,personId:f.personId??uniqueMemberId(f.person,families)}));
  const expenses=r.expenses.map((e:Expense)=>({...e,payerId:e.payerId??uniqueMemberId(e.payer,families),familyId:e.familyId??(families.filter(f=>f.name===e.group).length===1?families.find(f=>f.name===e.group)?.id:undefined)}));
- const tickets:Ticket[]=r.tickets??events.filter(e=>e.category==='交通').map(e=>({id:'ticket-'+e.id,title:e.title,mode:'高铁',date:dateAt(r.start,e.day),time:e.time,arrival:'',from:e.location.split('→')[0]?.trim()||'',to:e.location.includes('→')?e.location.split('→')[1].trim():'',number:'',status:e.status,seats:'',notes:e.notes,participants:e.participants}));
+ const tickets:Ticket[]=(r.tickets??events.filter(e=>e.category==='交通').map(e=>({id:'ticket-'+e.id,title:e.title,mode:'高铁',date:dateAt(r.start,e.day),time:e.time,arrival:'',from:e.location.split('→')[0]?.trim()||'',to:e.location.includes('→')?e.location.split('→')[1].trim():'',number:'',status:e.status,seats:'',notes:e.notes,participants:e.participants}))).map((t:Ticket)=>({...t,seatAssignments:t.seatAssignments??[]}));
  const migratedEvents=events.map(e=>({...e,meal:e.meal||(['早餐','午餐','晚餐'].includes(e.category)?e.category:undefined),category:placeFilters.includes(e.category)?e.category:['早餐','午餐','晚餐'].includes(e.category)?'餐厅':e.category==='游览'?'景点':e.category==='温泉'?'旅拍':'其他'}));
- return {...r,schemaVersion:6,categoryLabels:{...defaultCategoryLabels,...r.categoryLabels},taskCategories:r.taskCategories??(tasks.length?[...new Set(tasks.map((t:Task)=>t.category))]:['其他']),packingCategories:r.packingCategories??(packing.length?[...new Set(packing.map((p:PackingItem)=>p.category))]:['其他']),tickets,reminders:r.reminders??[],families,events:migratedEvents,places,stays,tips,tasks,packing,funds,expenses,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
+ return {...r,schemaVersion:7,categoryLabels:{...defaultCategoryLabels,...r.categoryLabels},taskCategories:r.taskCategories??(tasks.length?[...new Set(tasks.map((t:Task)=>t.category))]:['其他']),packingCategories:r.packingCategories??(packing.length?[...new Set(packing.map((p:PackingItem)=>p.category))]:['其他']),tickets,reminders:r.reminders??[],families,events:migratedEvents,places,stays,tips,tasks,packing,funds,expenses,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
 }
 export const defaultPacking:PackingItem[]=[
  ['身份证原件','证件与随身','放在随身包，乘车与景区入园时使用。'],
