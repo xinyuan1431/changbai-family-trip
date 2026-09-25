@@ -1,0 +1,10 @@
+'use client';
+import {useState} from 'react';
+import {Dialog,DialogContent,DialogTitle,DialogDescription} from '@/components/ui/dialog';
+import {Field,Choice,uid} from './trip-controls';
+export type CategoryRow={id:string;name:string};
+export function CategoryEditor({title,rows:initial,fixed,busy,onClose,onSave}:{title:string;rows:CategoryRow[];fixed?:boolean;busy:boolean;onClose:()=>void;onSave:(rows:CategoryRow[],replacement:string)=>Promise<boolean>}){
+ const [rows,setRows]=useState(initial),[target,setTarget]=useState(''),[error,setError]=useState('');
+ const removed=initial.filter(x=>!rows.some(r=>r.id===x.id));
+ return <Dialog open onOpenChange={v=>!v&&!busy&&onClose()}><DialogContent className="trip-dialog"><DialogTitle>{title}</DialogTitle><DialogDescription>保存后，分类名称与相关下拉菜单一起更新。</DialogDescription><form onSubmit={async e=>{e.preventDefault();const clean=rows.map(r=>({...r,name:r.name.trim()}));if(!clean.length||clean.some(r=>!r.name)||new Set(clean.map(r=>r.name)).size!==clean.length){setError('请保留至少一个分类，名称不能为空或重复。');return}if(await onSave(clean,target||clean[0].id))onClose();else setError('未能保存分类，请关闭此窗口查看错误提示并重试。')}}><fieldset disabled={busy}>{rows.map(r=><div className="category-edit-row" key={r.id}><Field label="分类名称" required value={r.name} onChange={name=>setRows(rows.map(x=>x.id===r.id?{...x,name}:x))}/>{!fixed&&<button type="button" className="btn" disabled={rows.length<=1} onClick={()=>{setRows(rows.filter(x=>x.id!==r.id));if(target===r.id)setTarget('')}}>移除</button>}</div>)}{!fixed&&<button type="button" className="btn" onClick={()=>setRows([...rows,{id:uid(),name:''}])}>添加分类</button>}{removed.length>0&&<><p>移除：{removed.map(r=>r.name).join('、')}。已有事项会保留，并归入下面的分类。</p><Choice label="已有事项归入" value={target||rows[0]?.id||''} options={rows.map(r=>({value:r.id,label:r.name||'新分类'}))} onChange={setTarget}/></>}{error&&<p role="alert">{error}</p>}<div className="form-actions"><button type="button" className="btn" onClick={onClose}>取消</button><button className="btn primary">保存分类</button></div></fieldset></form></DialogContent></Dialog>
+}
