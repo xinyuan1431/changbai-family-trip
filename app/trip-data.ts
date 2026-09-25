@@ -5,9 +5,9 @@ export type Member={id:string;name:string};
 export type Family={id:string;name:string;members:Member[]};
 export type Participants={mode:'all'|'selected'|'pending';familyIds:string[];memberIds:string[];excludedIds:string[];note:string};
 export type Event={id:string;day:number;time:string;title:string;location:string;people:string;status:string;notes:string;participants:Participants;placeIds:string[];category:string};
-export type Task={id:string;title:string;category:string;owner:string;done:boolean};
+export type Task={id:string;title:string;category:string;owner:string;ownerId?:string;done:boolean};
 export type Media={id:string;name:string};
-export type Fund={id:string;kind:'in'|'refund';amount:number;person:string;date:string;notes:string};
+export type Fund={id:string;kind:'in'|'refund';amount:number;person:string;personId?:string;date:string;notes:string};
 export type PackingItem={id:string;title:string;category:string;notes:string;done:boolean};
 export type Expense={id:string;title:string;category:string;amount:number;date:string;payer:string;group:string;notes:string;payerId?:string;familyId?:string;receipts?:Media[];fromFund?:boolean};
 export type Tip={id:string;title:string;notes:string;url?:string};
@@ -15,7 +15,7 @@ export type Place={id:string;name:string;category:string;address:string;descript
 export type Stay={id:string;placeId:string;checkIn:string;checkOut:string;room:string;status:string;notes:string;participants:Participants};
 export type DayInfo={title:string;region:string;note:string};
 export type Cover={subtitle:string;kicker:string;headline:string;route:string;note:string};
-export type Trip={schemaVersion:4;reminders:Reminder[];funds:Fund[];packing:PackingItem[];title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
+export type Trip={schemaVersion:5;reminders:Reminder[];funds:Fund[];packing:PackingItem[];title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
 export const allPeople=():Participants=>({mode:'all',familyIds:[],memberIds:[],excludedIds:[],note:''});
 export const placeCategories=['住宿','景点','餐厅','旅拍','用车与联络'];
 export const eventCategories=['交通','游览','早餐','午餐','晚餐','住宿','旅拍','温泉','其他'];
@@ -47,10 +47,11 @@ export function normalizeTrip(raw:unknown):Trip{
  const stays:Stay[]=r.stays===undefined?[{id:'stay-first',placeId:'place-stay',checkIn:r.start,checkOut:dateAt(r.start,3),room:'房型与房间分配待补充',status:'待确认',notes:'原计划住三晚；退房当天确认行李寄存与取行李安排。',participants:allPeople()}]:r.stays;
  const oldTips=r.schemaVersion>=2?r.tips:[...r.tips,{id:'official-north',title:'天气与景区开放 · 临行核实',notes:'山顶与镇内天气要分别确认，出行前查看长白山官方公告。',url:'https://www.changbaishan.gov.cn/'},{id:'official-river',title:'露水河 · 套餐与接送核实',notes:'漂流开放、集合点和接送时间按最终订单与景区公告确认。',url:'https://www.cbsslc.com/'}];
  const tips=r.schemaVersion>=3?oldTips:oldTips.filter((t:Tip)=>!(t.id==='p4'&&t.notes===legacy.tips.find(x=>x.id==='p4')?.notes)).map((t:Tip)=>t.id==='p1'&&t.notes===legacy.tips[0].notes?{...t,notes:'顶部天气栏可切换山顶附近与二道白河镇。出发前再核对预报、风力和景区开放公告，按当天情况调整穿衣。'}:t);
- const tasks=r.schemaVersion>=3?r.tasks:migrateTasks(r.tasks);
+ const tasks=(r.schemaVersion>=3?r.tasks:migrateTasks(r.tasks)).map((t:Task)=>({...t,ownerId:t.ownerId??uniqueMemberId(t.owner,families)}));
  const packing=r.packing??defaultPacking.map(p=>({...p,done:!!r.tasks.find((t:Task)=>t.id===(p.category==='衣物与鞋袜'?'t11':p.category==='温泉与漂流'?'t12':'t13')&&t.done)}));
- const funds=r.funds??[{id:'initial-fund-20000',kind:'in',amount:20000,person:'大姨妈',date:'',notes:'首笔旅行备用金，已收到；具体转账日期待补充。'}];
- return {...r,schemaVersion:4,reminders:r.reminders??[],families,events,places,stays,tips,tasks,packing,funds,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
+ const funds=(r.funds??[{id:'initial-fund-20000',kind:'in',amount:20000,person:'大姨妈',date:'',notes:'首笔旅行备用金，已收到；具体转账日期待补充。'}]).map((f:Fund)=>({...f,personId:f.personId??uniqueMemberId(f.person,families)}));
+ const expenses=r.expenses.map((e:Expense)=>({...e,payerId:e.payerId??uniqueMemberId(e.payer,families),familyId:e.familyId??(families.filter(f=>f.name===e.group).length===1?families.find(f=>f.name===e.group)?.id:undefined)}));
+ return {...r,schemaVersion:5,reminders:r.reminders??[],families,events,places,stays,tips,tasks,packing,funds,expenses,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
 }
 export const defaultPacking:PackingItem[]=[
  ['身份证原件','证件与随身','放在随身包，乘车与景区入园时使用。'],
@@ -84,3 +85,6 @@ export function fundTotals(t:Trip){const cents=(n:number)=>Math.round(n*100);con
 export const initialTrip=normalizeTrip(legacy);
 export function placeNames(e:Event,t:Trip){const names=e.placeIds.map(id=>t.places.find(p=>p.id===id)?.name).filter(Boolean);return names.length?names.join(' / '):e.location||'地点待补充'}
 export function safeUrl(value:string){try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:undefined}catch{return undefined}}
+
+export function uniqueMemberId(name:string,families:Family[]){const matches=membersOf(families).filter(m=>m.name===name);return matches.length===1?matches[0].id:undefined}
+export function memberName(id:string|undefined,fallback:string,families:Family[]){return membersOf(families).find(m=>m.id===id)?.name||fallback||"待选择"}

@@ -1,2 +1,13 @@
-const points={mountain:{latitude:42.0262,longitude:128.0653,label:'长白山北景区 · 天池附近'},town:{latitude:42.4574,longitude:128.1442,label:'二道白河镇'}};
-export async function GET(r:Request){const area=new URL(r.url).searchParams.get('area');if(area!=='mountain'&&area!=='town')return Response.json({error:'请选择天气区域'},{status:400});const p=points[area];try{const query=new URLSearchParams({latitude:String(p.latitude),longitude:String(p.longitude),current:'temperature_2m,apparent_temperature,weather_code,wind_speed_10m',daily:'temperature_2m_max,temperature_2m_min',timezone:'Asia/Shanghai',wind_speed_unit:'ms',forecast_days:'1'});const res=await fetch('https://api.open-meteo.com/v1/forecast?'+query,{signal:AbortSignal.timeout(10000)});if(!res.ok)throw Error('Weather source '+res.status);const b=await res.json() as {current?:{time:string;temperature_2m:number;apparent_temperature:number;weather_code:number;wind_speed_10m:number};daily?:{temperature_2m_max:number[];temperature_2m_min:number[]}};if(!b.current||!Number.isFinite(b.current.temperature_2m))throw Error('Invalid weather data');return Response.json({area,label:p.label,current:b.current,daily:b.daily,source:'Open-Meteo',fetchedAt:new Date().toISOString()},{headers:{'Cache-Control':'public, max-age=600'}})}catch(e){console.error(e);return Response.json({error:'天气暂时无法更新，请稍后重试。'},{status:503,headers:{'Cache-Control':'no-store'}})}}
+import {parseDistrictWeather,WeatherResult} from '@/app/weather-data';
+let cache:{expires:number;data:WeatherResult}|undefined;
+let pending:Promise<WeatherResult>|undefined;
+export async function GET(r:Request){
+ const area=new URL(r.url).searchParams.get('area');
+ if(area!=='mountain'&&area!=='town')return Response.json({error:'请选择天气区域'},{status:400});
+ if(area==='mountain')return Response.json({area,error:'免费数据源暂不提供北景区实时温度，请查看中国天气网景区预报。'},{headers:{'Cache-Control':'public, max-age=600'}});
+ if(cache&&cache.expires>Date.now())return Response.json(cache.data,{headers:{'Cache-Control':'public, max-age=600'}});
+ try{
+  pending??=(async()=>{const res=await fetch('https://uapis.cn/api/v1/misc/weather?adcode=222426',{signal:AbortSignal.timeout(10000)});if(!res.ok)throw Error('天气服务暂不可用');const data=parseDistrictWeather(await res.json());cache={expires:Date.now()+600000,data};return data;})();
+  return Response.json(await pending,{headers:{'Cache-Control':'public, max-age=600'}});
+ }catch{return Response.json({area,error:'参考天气暂时无法更新，请查看中国天气网。'},{status:503,headers:{'Cache-Control':'no-store'}})}finally{pending=undefined}
+}

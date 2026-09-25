@@ -4,13 +4,13 @@ const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>!isNaN(Date.parse(s
 const url=z.string().max(2000).refine(s=>!s||(()=>{try{return ['http:','https:'].includes(new URL(s).protocol)}catch{return false}})(),'链接须以 http 或 https 开头');
 const media=z.object({id:z.string().uuid(),name:z.string().max(200)});
 const participants=z.object({mode:z.enum(['all','selected','pending']),familyIds:ids,memberIds:ids,excludedIds:ids,note:str});
-export const tripSchema=z.object({schemaVersion:z.literal(4),title:short,start:date,days:z.number().int().min(1).max(30),budget:z.number().finite().min(0).max(1e8),
+export const tripSchema=z.object({schemaVersion:z.literal(5),title:short,start:date,days:z.number().int().min(1).max(30),budget:z.number().finite().min(0).max(1e8),
  reminders:z.array(z.object({id,title:short,notes:str,tripDate:z.union([date,z.literal('')]),publishedAt:z.string().datetime()})).max(500),
- funds:z.array(z.object({id,kind:z.enum(['in','refund']),amount:z.number().finite().min(.01).max(1e8),person:short,date:z.union([date,z.literal('')]),notes:str})).max(500),
+ funds:z.array(z.object({id,kind:z.enum(['in','refund']),amount:z.number().finite().min(.01).max(1e8),person:short,personId:id.optional(),date:z.union([date,z.literal('')]),notes:str})).max(500),
  packing:z.array(z.object({id,title:short,category:short,notes:str,done:z.boolean()})).max(200),
  families:z.array(z.object({id,name:short,members:z.array(z.object({id,name:short})).max(30)})).min(1).max(10),
  events:z.array(z.object({id,day:z.number().int().min(0).max(29),time:str,title:short,location:str,people:str,status:short,notes:str,participants,placeIds:ids,category:short})).max(500),
- tasks:z.array(z.object({id,title:short,category:str,owner:str,done:z.boolean()})).max(500),
+ tasks:z.array(z.object({id,title:short,category:str,owner:str,ownerId:id.optional(),done:z.boolean()})).max(500),
  expenses:z.array(z.object({id,title:short,category:str,amount:z.number().finite().min(.01).max(1e8),date,payer:str,group:str,notes:str,payerId:id.optional(),familyId:id.optional(),receipts:z.array(media).max(8).optional(),fromFund:z.boolean().optional()})).max(2000),
  tips:z.array(z.object({id,title:short,notes:str,url:url.optional()})).max(100),
  places:z.array(z.object({id,name:short,category:short,address:str,description:str,highlights:str,hours:str,phone:str,url,mapUrl:url,source:url,notes:str,status:short,favorite:z.boolean(),contactName:str.optional(),wechat:str.optional(),appointment:str.optional(),mapEnabled:z.boolean().optional(),internalMap:media.optional(),mapNotes:str.optional()})).max(500),
