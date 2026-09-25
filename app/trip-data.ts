@@ -1,4 +1,6 @@
 import {initialTrip as legacy} from './legacy-trip-data';
+export type Reminder={id:string;title:string;notes:string;tripDate:string;publishedAt:string};
+export const expenseCategories=['交通','包车与接送','住宿','餐饮','门票','温泉','漂流','旅拍','购物','其他'];
 export type Member={id:string;name:string};
 export type Family={id:string;name:string;members:Member[]};
 export type Participants={mode:'all'|'selected'|'pending';familyIds:string[];memberIds:string[];excludedIds:string[];note:string};
@@ -13,7 +15,7 @@ export type Place={id:string;name:string;category:string;address:string;descript
 export type Stay={id:string;placeId:string;checkIn:string;checkOut:string;room:string;status:string;notes:string;participants:Participants};
 export type DayInfo={title:string;region:string;note:string};
 export type Cover={subtitle:string;kicker:string;headline:string;route:string;note:string};
-export type Trip={schemaVersion:3;funds:Fund[];packing:PackingItem[];title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
+export type Trip={schemaVersion:4;reminders:Reminder[];funds:Fund[];packing:PackingItem[];title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
 export const allPeople=():Participants=>({mode:'all',familyIds:[],memberIds:[],excludedIds:[],note:''});
 export const placeCategories=['住宿','景点','餐厅','旅拍','用车与联络'];
 export const eventCategories=['交通','游览','早餐','午餐','晚餐','住宿','旅拍','温泉','其他'];
@@ -48,7 +50,7 @@ export function normalizeTrip(raw:unknown):Trip{
  const tasks=r.schemaVersion>=3?r.tasks:migrateTasks(r.tasks);
  const packing=r.packing??defaultPacking.map(p=>({...p,done:!!r.tasks.find((t:Task)=>t.id===(p.category==='衣物与鞋袜'?'t11':p.category==='温泉与漂流'?'t12':'t13')&&t.done)}));
  const funds=r.funds??[{id:'initial-fund-20000',kind:'in',amount:20000,person:'大姨妈',date:'',notes:'首笔旅行备用金，已收到；具体转账日期待补充。'}];
- return {...r,schemaVersion:3,families,events,places,stays,tips,tasks,packing,funds,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
+ return {...r,schemaVersion:4,reminders:r.reminders??[],families,events,places,stays,tips,tasks,packing,funds,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
 }
 export const defaultPacking:PackingItem[]=[
  ['身份证原件','证件与随身','放在随身包，乘车与景区入园时使用。'],
