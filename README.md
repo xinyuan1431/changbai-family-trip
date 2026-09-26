@@ -144,9 +144,11 @@ image hashes and a stable source revision, and refuses to overwrite saved destin
 data. Source and destination revisions are independent. Boots only initialize schema
 and retain all existing data; the hosting server never needs to contact the old site. Original Sites
 and PocketBay become independent copies; edits are not synchronized between them.
-The hosted HTTP adapter uses the canonical `changbai-family-trip.pocketbay.app`
-HTTPS origin so editor origin checks and secure cookies remain correct behind TLS
-termination. Change that origin deliberately if moving to another domain.
+The hosted HTTP adapter allows the two exact HTTPS origins
+`changbai-family-trip.pocketbay.app` and `changbai-family-trip--e.pocketbay.app`
+(the PocketBay embedded application) so editor checks and secure cookies work
+behind TLS termination. Other origins remain rejected. Update this explicit list
+deliberately if moving to another domain.
 
 For an isolated local migration check, set `POCKETBAY_DATA_DIR` to a temporary
 folder and leave `PORT` unset; the server listens only on `127.0.0.1:8082`. Without

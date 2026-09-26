@@ -29,9 +29,17 @@ export async function startPocketBay(dataDir, _configFile, port) {
     }),
   });
   await runtime.ready;
-  const origin = hosted ? 'https://changbai-family-trip.pocketbay.app' : 'http://127.0.0.1:8082';
+  const defaultOrigin = hosted ? 'https://changbai-family-trip.pocketbay.app' : 'http://127.0.0.1:8082';
+  const allowedOrigins = new Set([
+    'https://changbai-family-trip.pocketbay.app',
+    'https://changbai-family-trip--e.pocketbay.app',
+  ]);
   const server = createServer(async (request, response) => {
     try {
+      // The PocketBay shell embeds the app on its --e subdomain. Both exact
+      // origins belong to this app; never trust arbitrary forwarded origins.
+      const origin = hosted && allowedOrigins.has(request.headers.origin)
+        ? request.headers.origin : defaultOrigin;
       const url = new URL(request.url, origin);
       if (url.origin !== origin) { response.writeHead(400); response.end(); return; }
       const result = await runtime.dispatchFetch(url, {
