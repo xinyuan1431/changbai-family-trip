@@ -124,3 +124,28 @@ The portable build runs Vinext directly without a host `timeout` command. The ma
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)
 - [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+
+## PocketBay runtime
+
+PocketBay sets `PORT` and `POCKETBAY_DATA_DIR`. In that environment, `npm start`
+loads the separately approved `.env.pocketbay` file, initializes an empty persistent
+volume from `MIGRATION_SOURCE`, and serves the compiled Worker through a Node HTTP
+server. Wrangler/Miniflare versions remain pinned by the lockfile. No source watcher
+or development proxy is used for hosted requests.
+
+The runtime file contains `EDITOR_KEY` and an HTTPS `MIGRATION_SOURCE` origin. Keep
+it ignored by Git and approve it explicitly in the PocketBay pairing page. Select
+database option D for persistent files. SQLite and uploaded media live under
+`POCKETBAY_DATA_DIR/v3`; do not include these files in source archives.
+
+First boot copies the saved trip and all linked receipts/maps, verifies the source
+revision did not change during import, and inserts the trip only after the files
+are ready. Subsequent boots retain existing data and skip import. Original Sites
+and PocketBay become independent copies; edits are not synchronized between them.
+The hosted HTTP adapter uses the canonical `changbai-family-trip.pocketbay.app`
+HTTPS origin so editor origin checks and secure cookies remain correct behind TLS
+termination. Change that origin deliberately if moving to another domain.
+
+For an isolated local migration check, set `POCKETBAY_DATA_DIR` to a temporary
+folder and leave `PORT` unset; the server listens only on `127.0.0.1:8082`. Without
+`POCKETBAY_DATA_DIR`, the original local Wrangler preview remains available.
