@@ -129,7 +129,7 @@ The portable build runs Vinext directly without a host `timeout` command. The ma
 
 PocketBay sets `PORT` and `POCKETBAY_DATA_DIR`. In that environment, `npm start`
 loads the separately approved `.env.pocketbay` file, initializes an empty persistent
-volume from `MIGRATION_SOURCE`, and serves the compiled Worker through a Node HTTP
+volume schema, and serves the compiled Worker through a Node HTTP
 server. Wrangler/Miniflare versions remain pinned by the lockfile. No source watcher
 or development proxy is used for hosted requests.
 
@@ -138,9 +138,11 @@ it ignored by Git and approve it explicitly in the PocketBay pairing page. Selec
 database option D for persistent files. SQLite and uploaded media live under
 `POCKETBAY_DATA_DIR/v3`; do not include these files in source archives.
 
-First boot copies the saved trip and all linked receipts/maps, verifies the source
-revision did not change during import, and inserts the trip only after the files
-are ready. Subsequent boots retain existing data and skip import. Original Sites
+After deployment, run `node scripts/migrate-pocketbay.mjs` on the source computer.
+It copies the saved trip and linked receipts/maps through authenticated APIs, verifies
+image hashes and a stable source revision, and refuses to overwrite saved destination
+data. Source and destination revisions are independent. Boots only initialize schema
+and retain all existing data; the hosting server never needs to contact the old site. Original Sites
 and PocketBay become independent copies; edits are not synchronized between them.
 The hosted HTTP adapter uses the canonical `changbai-family-trip.pocketbay.app`
 HTTPS origin so editor origin checks and secure cookies remain correct behind TLS
