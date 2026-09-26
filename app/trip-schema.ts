@@ -4,9 +4,9 @@ const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>!isNaN(Date.parse(s
 const url=z.string().max(2000).refine(s=>!s||(()=>{try{return ['http:','https:'].includes(new URL(s).protocol)}catch{return false}})(),'链接须以 http 或 https 开头');
 const media=z.object({id:z.string().uuid(),name:z.string().max(200)});
 const participants=z.object({mode:z.enum(['all','selected','pending']),familyIds:ids,memberIds:ids,excludedIds:ids,note:str});
-export const tripSchema=z.object({schemaVersion:z.literal(7),title:short,start:date,days:z.number().int().min(1).max(30),budget:z.number().finite().min(0).max(1e8),
+export const tripSchema=z.object({schemaVersion:z.literal(8),title:short,start:date,days:z.number().int().min(1).max(30),budget:z.number().finite().min(0).max(1e8),
  categoryLabels:z.object({'必去 / 必吃':short,'住宿':short,'景点':short,'餐厅':short,'旅拍':short,'用车与联络':short,'其他':short}),
- taskCategories:z.array(short).min(1).max(50),packingCategories:z.array(short).min(1).max(50),
+ expenseCategories:z.array(short).min(1).max(50),taskCategories:z.array(short).min(1).max(50),packingCategories:z.array(short).min(1).max(50),
  tickets:z.array(z.object({seatAssignments:z.array(z.object({memberId:id,carriage:str,seat:str})).max(300),id,title:short,mode:short,date,time:str,arrival:str,from:str,to:str,number:str,status:short,seats:str,notes:str,participants})).max(500),
  reminders:z.array(z.object({id,title:short,notes:str,tripDate:z.union([date,z.literal('')]),publishedAt:z.string().datetime()})).max(500),
  funds:z.array(z.object({id,kind:z.enum(['in','refund']),amount:z.number().finite().min(.01).max(1e8),person:short,personId:id.optional(),date:z.union([date,z.literal('')]),notes:str})).max(500),
@@ -24,7 +24,8 @@ export const tripSchema=z.object({schemaVersion:z.literal(7),title:short,start:d
  if(t.events.some(e=>e.day>=t.days)||t.dayInfo.length!==t.days)fail('请先调整超出旅行天数的行程');
  const members=t.families.flatMap(f=>f.members),memberIds=new Set(members.map(m=>m.id)),familyIds=new Set(t.families.map(f=>f.id)),places=new Set(t.places.map(p=>p.id));
  if(new Set(Object.values(t.categoryLabels)).size!==7)fail('地点分类名称不能重复');
- for(const a of [t.taskCategories,t.packingCategories])if(new Set(a).size!==a.length)fail('分类名称不能重复');
+ for(const a of [t.taskCategories,t.packingCategories,t.expenseCategories])if(new Set(a).size!==a.length)fail('分类名称不能重复');
+ if(t.expenses.some(x=>!t.expenseCategories.includes(x.category)))fail('请选择有效费用分类');
  if(t.tasks.some(x=>!t.taskCategories.includes(x.category))||t.packing.some(x=>!t.packingCategories.includes(x.category)))fail('请选择有效分类');
  if(t.events.some(x=>!Object.keys(t.categoryLabels).includes(x.category)))fail('请选择有效活动分类');
  for(const tkt of t.tickets)if(new Set(tkt.seatAssignments.map(s=>s.memberId)).size!==tkt.seatAssignments.length)fail('同一乘客的座位记录不能重复');

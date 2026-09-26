@@ -42,7 +42,25 @@ const renamed=structuredClone(v6);renamed.categoryLabels['住宿']='落脚处';a
 const invalid=structuredClone(v6);invalid.taskCategories=['不存在'];assert(!m.tripSchema.safeParse(invalid).success);invalid.taskCategories=v6.taskCategories;invalid.tickets[0].participants={mode:'selected',familyIds:[],memberIds:['missing'],excludedIds:[],note:''};assert(!m.tripSchema.safeParse(invalid).success);
 console.log('PASS: v6 categories, transport migration, meals, empty lists, labels and ticket references');
 const oldTicketTrip=structuredClone(t);oldTicketTrip.schemaVersion=6;for(const x of oldTicketTrip.tickets)delete x.seatAssignments;
-const upgraded=m.normalizeTrip(oldTicketTrip);assert.equal(upgraded.schemaVersion,7);assert(upgraded.tickets.every(x=>x.seatAssignments.length===0));assert.deepEqual(m.normalizeTrip(upgraded),upgraded);
+const upgraded=m.normalizeTrip(oldTicketTrip);assert.equal(upgraded.schemaVersion,8);assert(upgraded.tickets.every(x=>x.seatAssignments.length===0));assert.deepEqual(m.normalizeTrip(upgraded),upgraded);
 const seated=structuredClone(upgraded);seated.tickets[0].seatAssignments=[{memberId:seated.families[0].members[0].id,carriage:'08',seat:'12A'}];assert(m.tripSchema.safeParse(seated).success);assert.deepEqual(m.normalizeTrip(seated).tickets[0].seatAssignments,seated.tickets[0].seatAssignments);
 seated.tickets[0].seatAssignments.push({...seated.tickets[0].seatAssignments[0]});assert(!m.tripSchema.safeParse(seated).success);
 assert.deepEqual(m.placeFilters.slice(0,2),['住宿','必去 / 必吃']);console.log('PASS: v7 per-person seats, migration, duplicate protection and filter order');
+
+const oldLedger={...structuredClone(t),expenses:structuredClone(linked.expenses),schemaVersion:7};delete oldLedger.expenseCategories;
+oldLedger.expenses[0].category='自定义旧分类';
+const newLedger=m.normalizeTrip(oldLedger);
+assert.equal(newLedger.schemaVersion,8);assert(newLedger.expenseCategories.includes('自定义旧分类'));
+assert.deepEqual(newLedger.expenses,oldLedger.expenses);assert.deepEqual(m.normalizeTrip(newLedger),newLedger);
+assert(m.tripSchema.safeParse(newLedger).success);
+const customLedger={...structuredClone(newLedger),expenseCategories:['新分类'],expenses:newLedger.expenses.map(e=>({...e,category:'新分类'}))};
+assert(m.tripSchema.safeParse(customLedger).success);assert.deepEqual(m.normalizeTrip(customLedger).expenseCategories,['新分类']);
+assert(!m.tripSchema.safeParse({...customLedger,expenseCategories:[]}).success);
+assert(!m.tripSchema.safeParse({...customLedger,expenseCategories:['新分类','新分类']}).success);
+assert(!m.tripSchema.safeParse({...customLedger,expenseCategories:['其他']}).success);
+assert(!m.tripSchema.safeParse({...customLedger,schemaVersion:7}).success);
+const stayRename=structuredClone(t),stayId=stayRename.stays[0].placeId;
+stayRename.places.find(p=>p.id===stayId).name='修改后的住宿';
+assert.equal(m.placeNames({placeIds:[stayId],location:''},stayRename),'修改后的住宿');
+assert.equal(stayRename.stays[0].placeId,t.stays[0].placeId);assert(m.tripSchema.safeParse(stayRename).success);
+console.log('PASS: v8 ledger categories, old data preservation, custom category persistence, validation and linked stay names');
