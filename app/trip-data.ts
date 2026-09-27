@@ -4,18 +4,18 @@ export const expenseCategories=['交通','包车与接送','住宿','餐饮','�
 export type Member={id:string;name:string};
 export type Family={id:string;name:string;members:Member[]};
 export type Participants={mode:'all'|'selected'|'pending';familyIds:string[];memberIds:string[];excludedIds:string[];note:string};
-export type Event={id:string;day:number;time:string;title:string;location:string;people:string;status:string;notes:string;participants:Participants;placeIds:string[];category:string;meal?:string};
-export type Task={id:string;title:string;category:string;owner:string;ownerId?:string;done:boolean};
+export type Event={ticketId?:string;id:string;day:number;time:string;title:string;location:string;people:string;status:string;notes:string;participants:Participants;placeIds:string[];category:string;meal?:string};
+export type Task={deadline?:{kind:"before"|"date"|"none";date:string};id:string;title:string;category:string;owner:string;ownerId?:string;done:boolean};
 export type Media={id:string;name:string};
 export type Fund={id:string;kind:'in'|'refund';amount:number;person:string;personId?:string;date:string;notes:string};
 export type PackingItem={id:string;title:string;category:string;notes:string;done:boolean};
 export type Expense={id:string;title:string;category:string;amount:number;date:string;payer:string;group:string;notes:string;payerId?:string;familyId?:string;receipts?:Media[];fromFund?:boolean};
 export type Tip={id:string;title:string;notes:string;url?:string};
-export type Place={id:string;name:string;category:string;address:string;description:string;highlights:string;hours:string;phone:string;url:string;mapUrl:string;source:string;notes:string;status:string;favorite:boolean;contactName?:string;wechat?:string;appointment?:string;mapEnabled?:boolean;internalMap?:Media;mapNotes?:string};
+export type Place={priceLevel?:number;id:string;name:string;category:string;address:string;description:string;highlights:string;hours:string;phone:string;url:string;mapUrl:string;source:string;notes:string;status:string;favorite:boolean;contactName?:string;wechat?:string;appointment?:string;mapEnabled?:boolean;internalMap?:Media;mapNotes?:string};
 export type Stay={id:string;placeId:string;checkIn:string;checkOut:string;room:string;status:string;notes:string;participants:Participants};
 export type DayInfo={title:string;region:string;note:string};
 export type Cover={subtitle:string;kicker:string;headline:string;route:string;note:string};
-export type Trip={schemaVersion:8;categoryLabels:Record<string,string>;expenseCategories:string[];taskCategories:string[];packingCategories:string[];tickets:Ticket[];reminders:Reminder[];funds:Fund[];packing:PackingItem[];title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
+export type Trip={schemaVersion:9;statusOptions:string[];categoryLabels:Record<string,string>;expenseCategories:string[];taskCategories:string[];packingCategories:string[];tickets:Ticket[];reminders:Reminder[];funds:Fund[];packing:PackingItem[];title:string;start:string;days:number;families:Family[];events:Event[];tasks:Task[];expenses:Expense[];tips:Tip[];budget:number;places:Place[];stays:Stay[];dayInfo:DayInfo[];cover:Cover};
 export const allPeople=():Participants=>({mode:'all',familyIds:[],memberIds:[],excludedIds:[],note:''});
 export const placeCategories=['住宿','景点','餐厅','旅拍','用车与联络','其他'];
 export const placeFilters=['住宿','必去 / 必吃',...placeCategories.filter(c=>c!=='住宿')];
@@ -45,7 +45,7 @@ function legacyParticipants(text:string,families:Family[]):Participants{if(text=
 export function normalizeTrip(raw:unknown):Trip{
  const r=raw as Record<string,any>;
  const families:Family[]=(r.families||[]).map((f:any,i:number)=>({...f,id:f.id||`legacy-family-${i}`,members:f.members.map((m:any,j:number)=>typeof m==='string'?{id:`legacy-member-${i}-${j}`,name:m}:m)}));
- const places:Place[]=(r.places===undefined?structuredClone(defaultPlaces):r.places).map((p:Place)=>({...p,category:placeCategories.includes(p.category)?p.category:p.category==='交通'?'用车与联络':'景点',mapEnabled:p.mapEnabled??['place-north','place-river'].includes(p.id)}));
+ const places:Place[]=(r.places===undefined?structuredClone(defaultPlaces):r.places).map((p:Place)=>({...p,category:r.schemaVersion>=9?p.category:placeCategories.includes(p.category)?p.category:p.category==='交通'?'用车与联络':'景点',mapEnabled:p.mapEnabled??['place-north','place-river'].includes(p.id)}));
  const legacyLinks:Record<string,string[]>={'入住二道白河民宿':['place-stay'],'长白山北坡 · 六人 VIP 游览':['place-north'],'恩都里 · 晚餐与夜游':['place-enduli'],'露水河 · 森林漂流':['place-river'],'一起泡聚龙温泉':['place-spa']};
  const events:Event[]=r.events.map((e:any)=>({...e,participants:e.participants||legacyParticipants(e.people||'',families),placeIds:e.placeIds||((legacyLinks[e.title]||[]).filter(id=>places.some(p=>p.id===id))),category:e.category||(/高铁|出发|返京|回到长春/.test(e.title)?'交通':/民宿/.test(e.title)?'住宿':/旅拍/.test(e.title)?'旅拍':/温泉/.test(e.title)?'温泉':/晚餐|热乎/.test(e.title)?'晚餐':'游览')}));
  const stays:Stay[]=r.stays===undefined?[{id:'stay-first',placeId:'place-stay',checkIn:r.start,checkOut:dateAt(r.start,3),room:'房型与房间分配待补充',status:'待确认',notes:'原计划住三晚；退房当天确认行李寄存与取行李安排。',participants:allPeople()}]:r.stays;
@@ -56,8 +56,8 @@ export function normalizeTrip(raw:unknown):Trip{
  const funds=(r.funds??[{id:'initial-fund-20000',kind:'in',amount:20000,person:'大姨妈',date:'',notes:'首笔旅行备用金，已收到；具体转账日期待补充。'}]).map((f:Fund)=>({...f,personId:f.personId??uniqueMemberId(f.person,families)}));
  const expenses=r.expenses.map((e:Expense)=>({...e,payerId:e.payerId??uniqueMemberId(e.payer,families),familyId:e.familyId??(families.filter(f=>f.name===e.group).length===1?families.find(f=>f.name===e.group)?.id:undefined)}));
  const tickets:Ticket[]=(r.tickets??events.filter(e=>e.category==='交通').map(e=>({id:'ticket-'+e.id,title:e.title,mode:'高铁',date:dateAt(r.start,e.day),time:e.time,arrival:'',from:e.location.split('→')[0]?.trim()||'',to:e.location.includes('→')?e.location.split('→')[1].trim():'',number:'',status:e.status,seats:'',notes:e.notes,participants:e.participants}))).map((t:Ticket)=>({...t,seatAssignments:t.seatAssignments??[]}));
- const migratedEvents=events.map(e=>({...e,meal:e.meal||(['早餐','午餐','晚餐'].includes(e.category)?e.category:undefined),category:placeFilters.includes(e.category)?e.category:['早餐','午餐','晚餐'].includes(e.category)?'餐厅':e.category==='游览'?'景点':e.category==='温泉'?'旅拍':'其他'}));
- return {...r,schemaVersion:8,expenseCategories:r.expenseCategories??[...new Set([...expenseCategories,...expenses.map((e:Expense)=>e.category)])],categoryLabels:{...defaultCategoryLabels,...r.categoryLabels},taskCategories:r.taskCategories??(tasks.length?[...new Set(tasks.map((t:Task)=>t.category))]:['其他']),packingCategories:r.packingCategories??(packing.length?[...new Set(packing.map((p:PackingItem)=>p.category))]:['其他']),tickets,reminders:r.reminders??[],families,events:migratedEvents,places,stays,tips,tasks,packing,funds,expenses,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
+ const migratedEvents=events.map(e=>({...e,meal:e.meal||(['早餐','午餐','晚餐'].includes(e.category)?e.category:undefined),category:r.schemaVersion>=9?e.category:placeFilters.includes(e.category)?e.category:['早餐','午餐','晚餐'].includes(e.category)?'餐厅':e.category==='游览'?'景点':e.category==='温泉'?'旅拍':'其他'}));
+ return {...r,schemaVersion:9,statusOptions:r.statusOptions??[...new Set(['候选','待确认','待预订','确认','已预订','已出票','已取消',...events.map(e=>e.status),...places.map(p=>p.status),...stays.map(s=>s.status),...tickets.map(t=>t.status)])],expenseCategories:r.expenseCategories??[...new Set([...expenseCategories,...expenses.map((e:Expense)=>e.category)])],categoryLabels:r.schemaVersion>=9?r.categoryLabels:{...defaultCategoryLabels,...r.categoryLabels},taskCategories:r.taskCategories??(tasks.length?[...new Set(tasks.map((t:Task)=>t.category))]:['其他']),packingCategories:r.packingCategories??(packing.length?[...new Set(packing.map((p:PackingItem)=>p.category))]:['其他']),tickets,reminders:r.reminders??[],families,events:migratedEvents,places,stays,tips,tasks,packing,funds,expenses,cover:{...defaultCover,...r.cover},dayInfo:Array.from({length:r.days},(_,i)=>r.dayInfo?.[i]||defaultDay(i))} as Trip;
 }
 export const defaultPacking:PackingItem[]=[
  ['身份证原件','证件与随身','放在随身包，乘车与景区入园时使用。'],

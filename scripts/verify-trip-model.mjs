@@ -1,6 +1,6 @@
 import {build} from 'esbuild';
 import assert from 'node:assert/strict';
-const bundle=await build({stdin:{contents:`export * from './app/trip-data'; export * from './app/trip-schema'; export {initialTrip as legacy} from './app/legacy-trip-data';`,resolveDir:process.cwd()},bundle:true,write:false,platform:'node',format:'esm'});
+const bundle=await build({stdin:{contents:`export * from './app/trip-data'; export * from './app/trip-schema'; export * from './app/trip-features'; export {initialTrip as legacy} from './app/legacy-trip-data';`,resolveDir:process.cwd()},bundle:true,write:false,platform:'node',format:'esm'});
 const m=await import('data:text/javascript;base64,'+Buffer.from(bundle.outputFiles[0].text).toString('base64'));
 const t=m.normalizeTrip(m.legacy);
 assert(m.tripSchema.safeParse(t).success);
@@ -42,7 +42,7 @@ const renamed=structuredClone(v6);renamed.categoryLabels['住宿']='落脚处';a
 const invalid=structuredClone(v6);invalid.taskCategories=['不存在'];assert(!m.tripSchema.safeParse(invalid).success);invalid.taskCategories=v6.taskCategories;invalid.tickets[0].participants={mode:'selected',familyIds:[],memberIds:['missing'],excludedIds:[],note:''};assert(!m.tripSchema.safeParse(invalid).success);
 console.log('PASS: v6 categories, transport migration, meals, empty lists, labels and ticket references');
 const oldTicketTrip=structuredClone(t);oldTicketTrip.schemaVersion=6;for(const x of oldTicketTrip.tickets)delete x.seatAssignments;
-const upgraded=m.normalizeTrip(oldTicketTrip);assert.equal(upgraded.schemaVersion,8);assert(upgraded.tickets.every(x=>x.seatAssignments.length===0));assert.deepEqual(m.normalizeTrip(upgraded),upgraded);
+const upgraded=m.normalizeTrip(oldTicketTrip);assert.equal(upgraded.schemaVersion,9);assert(upgraded.tickets.every(x=>x.seatAssignments.length===0));assert.deepEqual(m.normalizeTrip(upgraded),upgraded);
 const seated=structuredClone(upgraded);seated.tickets[0].seatAssignments=[{memberId:seated.families[0].members[0].id,carriage:'08',seat:'12A'}];assert(m.tripSchema.safeParse(seated).success);assert.deepEqual(m.normalizeTrip(seated).tickets[0].seatAssignments,seated.tickets[0].seatAssignments);
 seated.tickets[0].seatAssignments.push({...seated.tickets[0].seatAssignments[0]});assert(!m.tripSchema.safeParse(seated).success);
 assert.deepEqual(m.placeFilters.slice(0,2),['住宿','必去 / 必吃']);console.log('PASS: v7 per-person seats, migration, duplicate protection and filter order');
@@ -50,7 +50,7 @@ assert.deepEqual(m.placeFilters.slice(0,2),['住宿','必去 / 必吃']);console
 const oldLedger={...structuredClone(t),expenses:structuredClone(linked.expenses),schemaVersion:7};delete oldLedger.expenseCategories;
 oldLedger.expenses[0].category='自定义旧分类';
 const newLedger=m.normalizeTrip(oldLedger);
-assert.equal(newLedger.schemaVersion,8);assert(newLedger.expenseCategories.includes('自定义旧分类'));
+assert.equal(newLedger.schemaVersion,9);assert(newLedger.expenseCategories.includes('自定义旧分类'));
 assert.deepEqual(newLedger.expenses,oldLedger.expenses);assert.deepEqual(m.normalizeTrip(newLedger),newLedger);
 assert(m.tripSchema.safeParse(newLedger).success);
 const customLedger={...structuredClone(newLedger),expenseCategories:['新分类'],expenses:newLedger.expenses.map(e=>({...e,category:'新分类'}))};
@@ -64,3 +64,16 @@ stayRename.places.find(p=>p.id===stayId).name='修改后的住宿';
 assert.equal(m.placeNames({placeIds:[stayId],location:''},stayRename),'修改后的住宿');
 assert.equal(stayRename.stays[0].placeId,t.stays[0].placeId);assert(m.tripSchema.safeParse(stayRename).success);
 console.log('PASS: v8 ledger categories, old data preservation, custom category persistence, validation and linked stay names');
+
+const v8={...structuredClone(t),schemaVersion:8};delete v8.statusOptions;
+v8.places[0].status='客户自定义状态';v8.categoryLabels['其他']='Coffee';
+const v9=m.normalizeTrip(v8);assert.equal(v9.schemaVersion,9);assert(v9.statusOptions.includes('客户自定义状态'));assert.equal(v9.categoryLabels['其他'],'Coffee');assert.deepEqual(m.normalizeTrip(v9),v9);assert(m.tripSchema.safeParse(v9).success);
+const cats=m.categoryKeys(v9).filter(id=>id!=='住宿').map(id=>({id,name:v9.categoryLabels[id]}));cats.push({id:'coffee-new',name:'新咖啡分类'});
+const recat=m.updatePlaceCategories(v9,cats,'coffee-new');assert.equal(recat.places[0].category,'coffee-new');assert.equal(recat.stays[0].placeId,v9.stays[0].placeId);assert(!('住宿' in m.normalizeTrip(recat).categoryLabels));assert(m.tripSchema.safeParse(recat).success);
+const statuses=m.updateStatuses(v9,[{id:'客户自定义状态',name:'已确认'},{id:'new-status',name:'稍后处理'}],'new-status');assert.equal(statuses.places[0].status,'已确认');assert.equal(statuses.events[0].status,'稍后处理');assert(m.tripSchema.safeParse(statuses).success);
+const linkedTrip=structuredClone(v9);linkedTrip.tickets[0].date=linkedTrip.start;linkedTrip.tickets[0].time='08:10';linkedTrip.tickets[0].arrival='11:20';linkedTrip.events[0].ticketId=linkedTrip.tickets[0].id;
+assert.equal(m.eventWithTicket(linkedTrip.events[0],linkedTrip).time,'08:10 → 11:20');linkedTrip.tickets[0].time='09:30';linkedTrip.tickets[0].date=m.dateAt(linkedTrip.start,2);assert.equal(m.eventWithTicket(linkedTrip.events[0],linkedTrip).day,2);assert.equal(m.eventWithTicket(linkedTrip.events[0],linkedTrip).time,'09:30 → 11:20');assert(m.tripSchema.safeParse(linkedTrip).success);
+linkedTrip.tickets[0].date=m.dateAt(linkedTrip.start,35);assert(!m.tripSchema.safeParse(linkedTrip).success);
+const dueTasks=[{...t.tasks[0],id:'a',deadline:{kind:'none',date:''}},{...t.tasks[0],id:'b',deadline:{kind:'date',date:m.dateAt(t.start,1)}},{...t.tasks[0],id:'c',deadline:{kind:'before',date:''}}];assert.deepEqual(m.deadlineGroups(dueTasks,t.start).map(g=>g.key),['before',m.dateAt(t.start,1),'none']);assert.equal(m.taskDue(dueTasks[2],'2026-11-01'),'2026-10-31');
+const priced=structuredClone(v9);priced.places[0].priceLevel=4;assert(m.tripSchema.safeParse(priced).success);priced.places[0].priceLevel=5;assert(!m.tripSchema.safeParse(priced).success);
+console.log('PASS: v9 custom status preservation, removable place categories, linked stays retained, status migration, live ticket linkage, deadline order and price validation');
