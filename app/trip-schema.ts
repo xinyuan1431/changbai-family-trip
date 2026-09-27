@@ -4,7 +4,7 @@ const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>!isNaN(Date.parse(s
 const url=z.string().max(2000).refine(s=>!s||(()=>{try{return ['http:','https:'].includes(new URL(s).protocol)}catch{return false}})(),'链接须以 http 或 https 开头');
 const media=z.object({id:z.string().uuid(),name:z.string().max(200)});
 const participants=z.object({mode:z.enum(['all','selected','pending']),familyIds:ids,memberIds:ids,excludedIds:ids,note:str});
-export const tripSchema=z.object({schemaVersion:z.literal(9),title:short,start:date,days:z.number().int().min(1).max(30),budget:z.number().finite().min(0).max(1e8),
+export const tripSchema=z.object({schemaVersion:z.literal(10),title:short,start:date,days:z.number().int().min(1).max(30),budget:z.number().finite().min(0).max(1e8),
  categoryLabels:z.record(id,short),statusOptions:z.array(short).min(1).max(100),
  expenseCategories:z.array(short).min(1).max(50),taskCategories:z.array(short).min(1).max(50),packingCategories:z.array(short).min(1).max(50),
  tickets:z.array(z.object({seatAssignments:z.array(z.object({memberId:id,carriage:str,seat:str})).max(300),id,title:short,mode:short,date,time:str,arrival:str,from:str,to:str,number:str,status:short,seats:str,notes:str,participants})).max(500),
@@ -12,7 +12,7 @@ export const tripSchema=z.object({schemaVersion:z.literal(9),title:short,start:d
  funds:z.array(z.object({id,kind:z.enum(['in','refund']),amount:z.number().finite().min(.01).max(1e8),person:short,personId:id.optional(),date:z.union([date,z.literal('')]),notes:str})).max(500),
  packing:z.array(z.object({id,title:short,category:short,notes:str,done:z.boolean()})).max(200),
  families:z.array(z.object({id,name:short,members:z.array(z.object({id,name:short})).max(30)})).min(1).max(10),
- events:z.array(z.object({ticketId:id.optional(),id,day:z.number().int().min(0).max(29),time:str,title:short,location:str,people:str,status:short,notes:str,participants,placeIds:ids,category:short,meal:str.optional()})).max(500),
+ events:z.array(z.object({ticketId:id.optional(),id,day:z.number().int().min(0).max(29),time:str,title:short,location:str,people:str,status:short,notes:str,participants,placeIds:ids,category:short,meal:str.optional(),mealPlan:z.object({mode:z.enum(["pending","restaurant","home","snacks"]),food:str,shopping:str,preparation:str}).optional()})).max(500),
  tasks:z.array(z.object({deadline:z.object({kind:z.enum(['before','date','none']),date:z.union([date,z.literal('')])}).optional(),id,title:short,category:str,owner:str,ownerId:id.optional(),done:z.boolean()})).max(500),
  expenses:z.array(z.object({id,title:short,category:str,amount:z.number().finite().min(.01).max(1e8),date,payer:str,group:str,notes:str,payerId:id.optional(),familyId:id.optional(),receipts:z.array(media).max(8).optional(),fromFund:z.boolean().optional()})).max(2000),
  tips:z.array(z.object({id,title:short,notes:str,url:url.optional()})).max(100),
